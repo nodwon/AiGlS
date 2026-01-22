@@ -1,0 +1,43 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+build/
+dist/
+*.egg-info/
+
+# === OS & IDE ===
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# === Environment Variables (절대 업로드 금지!) ===
+.env
+.flaskenv
+
+# === Machine Learning & Data ===
+# 모델 파일은 용량이 크고 바이너리 형태라 깃에 올리지 않는 것이 원칙입니다.
+# 팀원과 공유가 필요하다면 LFS를 쓰거나 클라우드를 활용하세요.
+models/*.joblib
+models/*.pkl
+models/*.h5
+models/*.onnx
+
+# 데이터셋 (원본 데이터는 용량이 크므로 제외)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# === Streamlit ===
+.streamlit/config.toml
+
+# === Temporary & Logs ===
+logs/
+*.log
+temp/
+.ipynb_checkpoints/

@@ -2,6 +2,7 @@
 from src.agents.openai_agents import Agent, Swarm
 from src.agents.tools import detect_attack_tool, search_threat_tool
 
+## ==========================agent 설정==========================
 # 1. 탐지 에이전트 (Sentinel)
 # 역할: 로그 데이터를 분석 ML 모델을 사용하여 공격 여부를 판단
 sentinel = Agent(
@@ -35,7 +36,27 @@ analyst = Agent(
     tools=[search_threat_tool]
 )
 
-# 계층 호출 핸드오프 도구
+# 3. 관리자 에이전트 (Sherlog - Manager)
+# 역할: 사용자와 대화하며 전체 분석 프로세스를 조율하는 메인 에이전트
+manager = Agent(
+    name="Sherlog",
+    instructions="""
+    당신은 웹서버 보안전문가 'Sherlog'입니다. 당신은 베테랑 웹 보안 전문가로서 하위 에이전트들을 지휘하고 최종 결론을 도출합니다. 사용자와 직접 소통하며 웹 서버 로그 분석 프로젝트를 이끕니다.
+    
+    [워크플로우]
+    1. 대화 및 접수: 사용자와 웹 서버 보안에 대해 전문적인 대화를 나누고, 로그 파일(또는 텍스트) 입력을 대기합니다.
+    2. 탐지 지시: 로그가 입력되면 즉시 `consult_sentinel` 도구를 호출하여 Sentinel에게 분석을 맡기세요.
+    3. 심층 분석 요청: Sentinel의 결과가 공격(is_attack=True)을 가리키면, `consult_analyst` 도구를 호출하여 트렌드 및 대응 방안을 확보하세요.
+    4. 종합 보고: 두 에이전트의 보고서를 종합하여, 상황을 요약하고 향후 대책을 포함한 최종 브리핑을 사용자에게 제공하세요.
+    
+    [태도]
+    항상 침착하고 전문적인 태도로 사용자를 안심시키며, 신뢰할 수 있는 보안 파트너로서 행동하세요. 직접 분석하려 하지 말고 반드시 하위 에이전트를 활용하세요.
+    """,
+    tools=[consult_sentinel, consult_analyst]
+)
+
+## ==========================swarm hand off==========================
+# 계층 호출 핸드오프 도구 sentinel, analyst
 # 에이전트 호출 및 결과반환 함수
 
 def consult_sentinel(log_text: str) -> str:
@@ -61,22 +82,3 @@ def consult_analyst(attack_info: str) -> str:
         messages=[{"role": "user", "content": f"다음 공격에 대한 트렌드와 대응 방안을 분석해줘: {attack_info}"}]
     )
     return response.content
-
-# 3. 관리자 에이전트 (Sherlog - Manager)
-# 역할: 사용자와 대화하며 전체 분석 프로세스를 조율하는 메인 에이전트
-manager = Agent(
-    name="Sherlog",
-    instructions="""
-    당신은 웹서버 보안전문가 'Sherlog'입니다. 당신은 베테랑 웹 보안 전문가로서 하위 에이전트들을 지휘하고 최종 결론을 도출합니다. 사용자와 직접 소통하며 웹 서버 로그 분석 프로젝트를 이끕니다.
-    
-    [워크플로우]
-    1. 대화 및 접수: 사용자와 웹 서버 보안에 대해 전문적인 대화를 나누고, 로그 파일(또는 텍스트) 입력을 대기합니다.
-    2. 탐지 지시: 로그가 입력되면 즉시 `consult_sentinel` 도구를 호출하여 Sentinel에게 분석을 맡기세요.
-    3. 심층 분석 요청: Sentinel의 결과가 공격(is_attack=True)을 가리키면, `consult_analyst` 도구를 호출하여 트렌드 및 대응 방안을 확보하세요.
-    4. 종합 보고: 두 에이전트의 보고서를 종합하여, 상황을 요약하고 향후 대책을 포함한 최종 브리핑을 사용자에게 제공하세요.
-    
-    [태도]
-    항상 침착하고 전문적인 태도로 사용자를 안심시키며, 신뢰할 수 있는 보안 파트너로서 행동하세요. 직접 분석하려 하지 말고 반드시 하위 에이전트를 활용하세요.
-    """,
-    tools=[consult_sentinel, consult_analyst]
-)

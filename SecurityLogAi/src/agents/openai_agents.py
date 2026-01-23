@@ -2,7 +2,7 @@ import json
 from openai import OpenAI
 import inspect
 
-# 전역 콜백 변수 (간단한 시각화 연동을 위해 사용)
+# 전역 콜백 변수 -> Streamlit UI 등에서 하위 에이전트의 동작까지 추적
 _GLOBAL_CALLBACK = None
 
 def set_global_callback(callback):
@@ -14,6 +14,9 @@ def set_global_callback(callback):
     _GLOBAL_CALLBACK = callback
 
 class Agent:
+    """
+    에이전트 기본 클래스
+    """
     def __init__(self, name="Agent", model="gpt-4o", instructions="You are a helpful agent.", tools=None):
         self.name = name
         self.model = model
@@ -21,13 +24,16 @@ class Agent:
         self.tools = tools if tools else []
 
 class Swarm:
+    """
+    Swarm 클래스 
+    """
     def __init__(self, client=None):
         self.client = client if client else OpenAI()
 
     def run(self, agent, messages, context_variables=None, stream=False, debug=False, callback=None):
         input_callback = callback
         
-        # 콜백 래퍼 함수 (지역 콜백 + 전역 콜백 모두 실행)
+        # 콜백 래퍼 함수 지역,전역 콜백 모두 실행
         def trigger_callback(event, data):
             if input_callback:
                 input_callback(event, data)
@@ -39,9 +45,9 @@ class Swarm:
             
         current_messages = messages.copy()
         
-        # 시스템 프롬프트 설정 (중복 방지 로직 추가 가능)
+        # 시스템 프롬프트 설정 (중복 방지 필요한가?)
         system_message = {"role": "system", "content": agent.instructions}
-        # 이미 시스템 메시지가 맨 앞에 있다면 덮어쓰거나 생략해야 하지만, 단순화를 위해 추가
+        # 시스템 메시지 추가 - agent_setup.py에서 정의한 agent
         current_messages.insert(0, system_message)
 
         if callback or _GLOBAL_CALLBACK:
@@ -116,7 +122,7 @@ class Swarm:
         }
 
         try:
-            signature = inspect.signature(func)
+            signature = inspect.signature(func) 
         except ValueError:
             return None
 

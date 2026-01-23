@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # 프로젝트 루트 경로 추가 (모듈 import 뻐킹 에러)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
-from src.agents.openai_agents import Swarm
+from src.agents.openai_agents import Swarm, set_global_callback
 from src.agents.agent_setup import manager  # Sherlog (Manager Agent)
 
 # 환경 변수 로드
@@ -61,10 +61,39 @@ if prompt := st.chat_input("셜록에게 질문하세요"):
         # 상태 표시창 (에이전트 활동 시각화)
         status_container = st.status("🕵️ Sherlog이 분석을 시작합니다...", expanded=True)
         
-        # Swarm 실행 및 콜백 (스트림 처리 시뮬레이션)
-        # 현재 openai_agents.py의 run 메서드는 스트리밍을 완벽히 지원하지 않음
-        # 도구 실행 로그를 시각화하기 위해 약간의 개조가 필요함
-        # 여기서는 결과만 받아서 처리
+        # 콜백 함수 정의 (상태창 업데이트용)
+        def ui_callback(event, data):
+            if event == "agent_start":
+                # 에이전트 전환 알림
+                agent_name = data
+                status_container.write(f"**🔄 에이전트 전환: {agent_name}**")
+                if agent_name == "Sentinel":
+                    status_container.update(label="🛡️ Sentinel이 로그를 분석 중입니다...", state="running")
+                elif agent_name == "Analyst":
+                    status_container.update(label="🧠 Analyst가 심층 분석 중입니다...", state="running")
+                
+            elif event == "tool_start":
+                # 도구 실행 알림
+                tool_name = data.get("name")
+                args = data.get("arguments")
+                
+                # 내부 핸드오프 도구는 굳이 인자를 보여줄 필요가 없을 수 있음 (너무 길어서)
+                if tool_name in ["consult_sentinel", "consult_analyst"]:
+                     status_container.write(f"  ↳ 📞 하위 에이전트 호출: `{tool_name}`")
+                else:
+                     status_container.write(f"  ↳ 🛠️ 도구 실행: `{tool_name}`")
+                     with status_container.expander(f"입력 데이터 ({tool_name})"):
+                         st.json(args)
+            
+            elif event == "tool_end":
+                tool_name = data.get("name")
+                result = data.get("result")
+                # 결과는 너무 길 수 있으니 expander로
+                with status_container.expander(f"실행 결과 ({tool_name})"):
+                    st.code(result)
+
+        # 전역 콜백 설정
+        set_global_callback(ui_callback)
         
         try:
             response = st.session_state["client"].run(
@@ -72,13 +101,6 @@ if prompt := st.chat_input("셜록에게 질문하세요"):
                 messages=st.session_state.messages
             )
             
-            # 응답 처리
-            if response.tool_calls:
-                # 도구 호출이 있었다면 (사실상 run 내부에서 처리되므로 최종 응답만 옴)
-                # 만약 run 메서드 내부 과정을 보고 싶다면 openai_agents.py 수정 필요
-                # 현재는 최종 응답만 출력
-                pass
-
             full_response = response.content
             message_placeholder.markdown(full_response)
             status_container.update(label="✅ 분석 완료", state="complete", expanded=False)
@@ -89,6 +111,8 @@ if prompt := st.chat_input("셜록에게 질문하세요"):
         except Exception as e:
             status_container.update(label="❌ 오류 발생", state="error")
             st.error(f"Error: {str(e)}")
+        finally:
+            set_global_callback(None) # 콜백 해제
 
 # 파일 업로드 로직
 if uploaded_file and "file_processed" not in st.session_state:

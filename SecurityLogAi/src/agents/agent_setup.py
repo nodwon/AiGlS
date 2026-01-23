@@ -45,12 +45,18 @@ def consult_sentinel(log_text: str) -> str:
     """
     Sentinel 에이전트에게 로그 분석을 의뢰하고 결과를 반환
     """
-    client = Swarm()
-    response = client.run(
-        agent=sentinel,
-        messages=[{"role": "user", "content": f"다음 로그를 분석해줘: {log_text}"}] # 로그 전달
-    )
-    return response.content
+    try:
+
+        client = Swarm()
+        response = client.run(
+            agent=sentinel,
+            messages=[{"role": "user", "content": f"다음 로그를 분석해줘: {log_text}"}] # 로그 전달
+        )
+        return response.content
+    except Exception as e:
+        return f"[Sentinel Error] 탐지 실패: {str(e)}"
+ 
+
 
 def consult_analyst(attack_info: str) -> str:
     """
@@ -58,12 +64,15 @@ def consult_analyst(attack_info: str) -> str:
     Args:
         attack_info (str): 감지된 공격 유형 및 설명 -> 
     """
-    client = Swarm()
-    response = client.run(
-        agent=analyst,
-        messages=[{"role": "user", "content": f"다음 공격에 대한 트렌드와 대응 방안을 분석해줘: {attack_info}"}]
-    )
-    return response.content
+    try:
+        client = Swarm()
+        response = client.run(
+            agent=analyst,
+            messages=[{"role": "user", "content": f"다음 공격에 대한 트렌드와 대응 방안을 분석해줘: {attack_info}"}]
+        )
+        return response.content
+    except Exception as e:
+        return f"[Analyst Error] 분석 실패: {str(e)}. 기본 대응 가이드를 제공하세요."
 ## ==========================Manager Agent==========================
 # 3. 관리자 에이전트 (Sherlog - Manager)
 # 역할: 사용자와 대화하며 전체 분석 프로세스를 조율하는 메인 에이전트

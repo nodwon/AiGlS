@@ -119,7 +119,7 @@ if uploaded_file and "file_processed" not in st.session_state:
     # 파일 내용 읽기
     log_content = uploaded_file.read().decode("utf-8")
     
-    # 텍스트가 너무 길면 잘라내기 -> 나중에 파싱과정에서 수정할 예정 ml팀과 피쳐 협업
+    # 텍스트가 너무 길면 잘라내기 -> 나중에 로그 뷰 회의 후 보여줄 내용 정해서 수정예정
     if len(log_content) > 2000:
         log_content = log_content[:2000] + "\n...(생략)..."
         

@@ -35,24 +35,25 @@ analyst = Agent(
     tools=[search_threat_tool]
 )
 
-# --- 계층적 호출을 위한 핸드오프 도구 정의 ---
+# 계층 호출 핸드오프 도구
+# 에이전트 호출 및 결과반환 함수
 
 def consult_sentinel(log_text: str) -> str:
     """
-    Sentinel 에이전트에게 로그 분석을 의뢰하고 결과를 반환합니다.
+    Sentinel 에이전트에게 로그 분석을 의뢰하고 결과를 반환
     """
     client = Swarm()
     response = client.run(
         agent=sentinel,
-        messages=[{"role": "user", "content": f"다음 로그를 분석해줘: {log_text}"}]
+        messages=[{"role": "user", "content": f"다음 로그를 분석해줘: {log_text}"}] # 로그 전달
     )
     return response.content
 
 def consult_analyst(attack_info: str) -> str:
     """
-    Analyst 에이전트에게 탐지된 공격 정보에 대한 트렌드 분석과 대응 방안 검색을 의뢰합니다.
+    Analyst 에이전트에게 탐지된 공격 정보에 대한 트렌드 분석과 대응 방안 검색 의뢰
     Args:
-        attack_info (str): 감지된 공격 유형 및 설명
+        attack_info (str): 감지된 공격 유형 및 설명 -> 
     """
     client = Swarm()
     response = client.run(

@@ -87,9 +87,23 @@ def search_threat_tool(keyword: str) -> str:
     try:
         # 실제 Tavily API 호출
         client = TavilyClient(api_key=api_key)
-        # QNA 검색 사용 : 질문 답변 단일화 나중에 빼도됨
-        response = client.qna_search(query=f"web security threat {keyword} trend and mitigation")
-        return f"[Tavily Search Result]\n{response}"
+        # QnA -> 일반 search로 바꿈(api 키 무료 돈이 부족할시 채림님도 하나 만들어 주셔야할듯)
+        response = client.search(
+            query=f"web security threat '{keyword}' trends CVE mitigation", 
+            search_depth="advanced",
+            max_results=3
+        )
+        
+        results = response.get("results", [])
+        formatted_result = f"### '{keyword}' 관련 최신 보안 트렌드 검색 결과\n"
+        
+        for i, res in enumerate(results, 1):
+            formatted_result += f"\n**{i}. {res.get('title')}**\n"
+            formatted_result += f"- **URL**: {res.get('url')}\n"
+            formatted_result += f"- **내용**: {res.get('content')[:300]}...\n"
+            
+        return formatted_result
+
     except Exception as e:
         return f"[Tavily Search Error] 검색 중 오류 발생: {str(e)}"
 

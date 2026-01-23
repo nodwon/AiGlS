@@ -47,13 +47,31 @@ for msg in st.session_state.messages:
 uploaded_file = st.file_uploader("로그 파일 업로드 (.log, .txt)", type=["log", "txt"])
 
 # 사용자 입력 처리
-if prompt := st.chat_input("셜록에게 질문하세요"):
-    # 사용자 메시지 표시
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+# 사용자 입력 처리
+prompt = st.chat_input("셜록에게 질문하세요")
 
-    # 에이전트 실행
+if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.rerun()
+
+# 파일 업로드 로직 (자동 실행 트리거)
+if uploaded_file and "file_processed" not in st.session_state:
+    # 파일 내용 읽기
+    log_content = uploaded_file.read().decode("utf-8")
+    
+    # 텍스트가 너무 길면 잘라내기
+    if len(log_content) > 2000:
+        log_content = log_content[:2000] + "\n...(생략)..."
+        
+    user_msg = f"다음 로그 파일을 분석하고, 상세한 보안 보고서를 작성해줘:\n\n```\n{log_content}\n```"
+    
+    # 세션에 메시지 추가 및 재시작 (자동 분석 시작)
+    st.session_state.messages.append({"role": "user", "content": user_msg})
+    st.session_state["file_processed"] = True
+    st.rerun()
+
+# 마지막 메시지가 사용자라면 에이전트 실행 (자동/수동 공통)
+if st.session_state.messages[-1]["role"] == "user":
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
@@ -75,15 +93,11 @@ if prompt := st.chat_input("셜록에게 질문하세요"):
             elif event == "tool_start":
                 # 도구 실행 알림
                 tool_name = data.get("name")
-                args = data.get("arguments")
-                
-                # 내부 핸드오프 도구는 굳이 인자를 보여줄 필요가 없을 수 있음 (너무 길어서)
+                # 내부 핸드오프 도구는 굳이 인자를 보여줄 필요가 없을 수 있음
                 if tool_name in ["consult_sentinel", "consult_analyst"]:
                      status_container.write(f"  ↳ 📞 하위 에이전트 호출: `{tool_name}`")
                 else:
                      status_container.write(f"  ↳ 🛠️ 도구 실행: `{tool_name}`")
-                     with status_container.expander(f"입력 데이터 ({tool_name})"):
-                         st.json(args)
             
             elif event == "tool_end":
                 tool_name = data.get("name")
@@ -113,19 +127,3 @@ if prompt := st.chat_input("셜록에게 질문하세요"):
             st.error(f"Error: {str(e)}")
         finally:
             set_global_callback(None) # 콜백 해제
-
-# 파일 업로드 로직
-if uploaded_file and "file_processed" not in st.session_state:
-    # 파일 내용 읽기
-    log_content = uploaded_file.read().decode("utf-8")
-    
-    # 텍스트가 너무 길면 잘라내기 -> 나중에 로그 뷰 회의 후 보여줄 내용 정해서 수정예정
-    if len(log_content) > 2000:
-        log_content = log_content[:2000] + "\n...(생략)..."
-        
-    user_msg = f"다음 로그 파일을 분석해줘:\n\n```\n{log_content}\n```"
-    
-    # 세션에 메시지 추가 및 재시작
-    st.session_state.messages.append({"role": "user", "content": user_msg})
-    st.session_state["file_processed"] = True
-    st.rerun()

@@ -41,21 +41,30 @@ analyst = Agent(
 # 계층 호출 핸드오프 도구 sentinel, analyst
 # 에이전트 호출 및 결과반환 함수
 
-def consult_sentinel(log_text: str) -> str:
+def consult_sentinel(log_text: str, max_retries: int = 2) -> str:
     """
+    재시도 있는 Sentinel 에이전트 호출 함수
     Sentinel 에이전트에게 로그 분석을 의뢰하고 결과를 반환
+
     """
-    try:
-        client = Swarm()
-        response = client.run(
-            agent=sentinel,
-            messages=[{"role": "user", "content": f"다음 로그를 분석해줘: {log_text}"}] # 로그 전달
-        )
-        return response.content
-    except Exception as e:
-        return f"[Sentinel Error] 탐지 분석 실패: {str(e)}\n수동 확인이 필요합니다."
+    for attempt in range(max_retries):
+        try:
+            client = Swarm()
+            response = client.run(
+                agent=sentinel,
+                messages=[{"role": "user", "content": f"다음 로그를 분석해줘: {log_text}"}] # 로그 전달
+            )
 
-
+            # 응답 검증
+            if not response or not response.content:
+                raise ValueError("빈 응답을 받았습니다.")
+            
+            return response.content  # str 반환
+    
+        except Exception as e:
+            if attempt == max_retries - 1:
+                return f"[Sentinel Error] 탐지 분석 실패: {str(e)}\n수동 확인이 필요합니다."
+            continue
 
 def consult_analyst(attack_info: str) -> str:
     """

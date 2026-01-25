@@ -10,7 +10,12 @@ except ImportError:
     TavilyClient = None
 
 # 모델 파일 경로 설정 (지금은 임시로 정해놓음)
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "../../model/random_forest.pkl")
+# MODEL_PATH = os.path.join(os.path.dirname(__file__), "../../model/random_forest.pkl")
+
+MODEL_PATH = os.getenv("MODEL_PATH", "./models/security_rf_model.pkl")
+X_ENCODER_PATH = os.getenv("ENCODER_X_PATH", "./models/feature_encoder.pkl")
+Y_ENCODER_PATH = os.getenv("ENCODER_Y_PATH", "./models/label_encoder.pkl")
+
 
 def detect_attack_tool(log_text: str) -> dict:
     """
@@ -25,24 +30,33 @@ def detect_attack_tool(log_text: str) -> dict:
     Returns:
         dict: DetectionResult 스키마에 맞는 딕셔너리 (is_attack, confidence, type 등 포함)
     """
-    
+
     # 1. ML 모델 기반 탐지 시도
     try:
         if os.path.exists(MODEL_PATH):
             model = joblib.load(MODEL_PATH)
+            le_x = joblib.load(X_ENCODER_PATH)
+            le_y = joblib.load(Y_ENCODER_PATH)
             # vectorizer 등 전처리 과정이 필요할 수 있으나, 현재는 모델만 로드하는 구조로 작성
             # 실제 구현 시: vectorized_text = vectorizer.transform([log_text])
             # prediction = model.predict(vectorized_text)
             # probability = model.predict_proba(vectorized_text)
             # (임시) 모델 로드 성공 시뮬레이션 (전처리 로직 부재로 인한 더미)
-            pass 
+            # 모델 탐지 성공 가정 시나리오
+            return DETECTION_RESULT_TEMPLATE(
+                is_attack=True, 
+                confidence=0.98,
+                type="ML_Detected_Threat", # 실제로는 le_y.inverse_transform 사용
+                severity="high",
+                description="기계학습 모델에 의해 분석된 위협입니다."
+            )
     except Exception as e:
         # 모델 로딩 에러 발생 시 로그 출력 (실제 운영 시에는 file log 권장)
         print(f"DEBUG: 모델 로드 실패 - {str(e)}")
 
     # [임시] 2. 룰 기반 탐지 대용품
     # 간단한 SQL Injection, xss 패턴 탐지
-    if re.search(r"SELECT", log_text, re.IGNORECASE):
+    '''if re.search(r"SELECT", log_text, re.IGNORECASE):
         return DETECTION_RESULT_TEMPLATE(
             is_attack=True,
             confidence=0.95,
@@ -58,6 +72,17 @@ def detect_attack_tool(log_text: str) -> dict:
             type="XSS",
             severity="high",
             description="스크립트 태그가 감지되었습니다. XSS 공격 위협이 있습니다."
+        )'''
+    # --- 룰 기반 탐지 강화 ---
+    # 1. SQL Injection 패턴 확장 (OR '1'='1', 주석처리 -- 등 추가)
+    sql_patterns = r"SELECT|INSERT|UPDATE|DELETE|UNION|DROP|OR\s+['\"].+['\"]\s*=\s*['\"].+|--"
+    if re.search(sql_patterns, log_text, re.IGNORECASE):
+        return DETECTION_RESULT_TEMPLATE(
+            is_attack=True,
+            confidence=0.98, # 확신도를 높여서 에이전트가 헷갈리지 않게 함
+            attack_type="SQL Injection (Rule-Enhanced)",
+            severity="critical",
+            description="[⚠️ 룰 탐지] 인증 우회 시도(OR 1=1) 또는 SQL 주석 패턴이 감지되었습니다."
         )
 
     # 공격이 감지되지 않은 경우

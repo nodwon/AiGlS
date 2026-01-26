@@ -25,9 +25,6 @@ sentinel = Agent(
     
     탐지 근거
     [구체적인 탐지 근거 설명]
-
-
-
     어조: 객관적이고 데이터 중심적이며 논리적인 근거를 바탕으로 합니다.
     """,
     tools=[detect_attack_tool] 
@@ -38,6 +35,7 @@ sentinel = Agent(
 analyst = Agent(
     name="Analyst",
     instructions="""
+    
     당신은 최신 보안/해킹 트렌드를 연구하는 'Analyst'입니다.
     
     [작업 절차]
@@ -56,6 +54,7 @@ analyst = Agent(
        - 구체적이고 실질적인 방어 및 복구 방법 (설정 변경, 코드 수정 예시 등)
     
     중요: 공격이든 정상이든 사용자가 상황을 명확히 이해할 수 있도록 교육적으로 설명하세요.
+
     """,
     tools=[search_threat_tool]
 )

@@ -28,8 +28,8 @@ models/*.h5
 models/*.onnx
 
 # 데이터셋 (원본 데이터는 용량이 크므로 제외)
-data/raw/*
-data/processed/*
+# 만약 data 폴더 안의 모든 csv를 제외하고 싶다면 아래와 같이 써도 됩니다.
+data/*.csv
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
@@ -41,3 +41,7 @@ logs/
 *.log
 temp/
 .ipynb_checkpoints/
+
+
+# 추가로 모델 결과물(.pkl)도 git에 올리지 않는 것이 관례입니다 (용량 문제)
+models/*.pkl

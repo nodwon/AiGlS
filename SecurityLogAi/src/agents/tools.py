@@ -4,6 +4,7 @@ import joblib
 import re
 from datetime import datetime
 from src.agents.schemas import DetectionResult
+
 try:
     from tavily import TavilyClient
 except ImportError:
@@ -132,3 +133,5 @@ def DETECTION_RESULT_TEMPLATE(is_attack, confidence, type, severity="low", descr
         description=description,
         timestamp=datetime.now().isoformat()
     ).model_dump()
+
+

@@ -40,18 +40,33 @@ def detect_attack_tool(log_text: str) -> dict:
         # 모델 로딩 에러 발생 시 로그 출력 (실제 운영 시에는 file log 권장)
         print(f"DEBUG: 모델 로드 실패 - {str(e)}")
 
-    # [임시] 2. 룰 기반 탐지 대용품
-    # 간단한 SQL Injection, xss 패턴 탐지
-    if re.search(r"SELECT", log_text, re.IGNORECASE):
+    
+# [임시] 2. 룰 기반 탐지 대용품
+    # 간단한 SQL Injection, XSS, Path Traversal 패턴 탐지
+    
+    # Path Traversal 패턴
+    path_traversal_patterns = r"\.\./|\.\.\\|/etc/passwd|/etc/shadow|/proc/|C:\\Windows"
+    if re.search(path_traversal_patterns, log_text, re.IGNORECASE):
+        return DETECTION_RESULT_TEMPLATE(
+            is_attack=True,
+            confidence=0.95,
+            type="Path Traversal",
+            severity="high",
+            description="디렉토리 탐색 공격 시도가 감지되었습니다. 시스템 파일 접근 위협이 있습니다."
+        )
+    
+    # SQL Injection 패턴 (강화)
+    if re.search(r"SELECT|INSERT|UPDATE|DELETE|UNION|DROP|OR\s+['\"].*['\"].*=.*['\"]|--", log_text, re.IGNORECASE):
         return DETECTION_RESULT_TEMPLATE(
             is_attack=True,
             confidence=0.95,
             type="SQL Injection",
             severity="critical",
-            description="SQL SELECT 구문이 감지되었습니다. 데이터 유출 위협이 있습니다."
+            description="SQL 구문이 감지되었습니다. 데이터베이스 유출 위협이 있습니다."
         )
     
-    if "<script>" in log_text.lower():
+    # XSS 패턴 (강화)
+    if re.search(r"<script>|javascript:|onerror=|onload=", log_text, re.IGNORECASE):
          return DETECTION_RESULT_TEMPLATE(
             is_attack=True,
             confidence=0.90,

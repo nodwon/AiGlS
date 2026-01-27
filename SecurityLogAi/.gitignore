@@ -45,3 +45,8 @@ temp/
 
 # 추가로 모델 결과물(.pkl)도 git에 올리지 않는 것이 관례입니다 (용량 문제)
 models/*.pkl
+
+# 테스트용 파이썬 파일 및 로그파일
+generate_test_logs.py
+fake_access.log
+src/agents/temp_logs/

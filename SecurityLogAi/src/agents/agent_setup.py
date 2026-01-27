@@ -46,9 +46,11 @@ analyst = Agent(
     1. **통합 분석(Contextual Search)**: 여러 공격 유형이 감지되었다면, **절대 개별적으로 검색하지 마세요.** 이를 관통하는 하나의 거대한 트렌드(Big Flow)를 찾으세요.
        - Bad: `search("SQLi")`, `search("XSS")` (따로따로 검색 X)
        - Good: `search("Recent cyber attack trends involving SQL Injection and XSS chain")` (한 방에 검색 O)
-    2. **심층 리포팅**: 검색 결과를 바탕으로 아래 양식에 맞춰 **상세히** 작성하세요.
+    2. **심층 리포팅**: 
+       - **[Case A] 심층 인텔리전스 보고서 요청 시**: 아래 [출력 양식]을 엄격히 준수하세요.
+       - **[Case B] 일반 질문(Global Chat) 시**: 양식을 무시하고, 자연스러운 대화체로 답변하세요.
     
-    [출력 양식 (각 공격 유형별로 작성)]
+    [출력 양식 (Case A: 보고서 요청 시에만 사용)]
     ### 1. [공격유형 명] (예: SQL Injection)
     **A. 최신 위협 트렌드 (Global Trends)**
     - (최근 6개월~1년 내의 해당 공격 트렌드를 구체적으로 서술. 예: "AI를 악용한 난독화 쿼리 증가" 등)
@@ -121,6 +123,21 @@ def consult_analyst(attack_info: str) -> str:
     except Exception as e:
         return f"[Analyst Error] 분석 중 오류: {str(e)}\n(기본적인 보안 수칙을 참고하세요)"
 
+def ask_analyst(question: str) -> str:
+    """
+    [Sherlog용] Analyst에게 '일반적인 보안 질문'을 하거나 '단순 트렌드'를 물어볼 때 사용합니다.
+    보고서 양식을 강제하지 않고 자연스럽게 대화합니다.
+    """
+    client = get_swarm_client()
+    try:
+        response = client.run(
+            agent=analyst,
+            messages=[{"role": "user", "content": f"다음 질문에 대해 자연스럽게 답변해줘 (보고서 양식 사용 금지):\nQuestion: {question}"}]
+        )
+        return response.content
+    except Exception as e:
+        return f"[Analyst Error] 질문 처리 중 오류: {str(e)}"
+
 # ==========================================
 # 3. 관리자 에이전트 (Sherlog - Manager) 정의
 # ==========================================
@@ -135,11 +152,12 @@ manager = Agent(
     
     [지휘 통제 프로토콜]
     1. **접수**: 사용자가 로그를 주면 즉시 분석을 시작하세요.
-    2. **파일 분석**: 만약 사용자가 "파일 경로"를 제공하면, **절대 "파일을 열 수 없다"고 거절하지 마세요.** 즉시 `consult_sentinel`에게 그 경로를 그대로 전달하세요.
-    3. **데이터 기반 보고**: Sentinel이 제공한 **[Attack Details & Payloads]의 내용을 참고하여 표를 작성하거나 요약하세요.**
-    4. **심층 분석**: Sentinel의 보고에서 **탐지된 모든 공격 유형(상위 3개)**과 **각 페이로드 샘플**을 정리하여 `consult_analyst`에게 전달하세요. 하나만 고르지 마세요.
-       - 예: "SQL Injection(Sample: ' OR 1=1), XSS(Sample: <script>...), Path Traversal(Sample: ../../)이 탐지됨. 이 3가지 모두에 대해 각각 트렌드와 대응책을 상세히 분석해줘."
-    5. **최종 브리핑**: 수집된 모든 정보를 종합하여 보고서를 작성하세요.
+    2. **일반 질문**: 사용자가 로그 분석이 아니라 단순히 "최신 보안 트렌드 알려줘", "Log4j가 뭐야?" 같은 질문을 하면, **`ask_analyst` 도구를 사용하세요.** (보고서 작성 불필요)
+    3. **파일 분석**: 만약 사용자가 "파일 경로"를 제공하면, **절대 "파일을 열 수 없다"고 거절하지 마세요.** 즉시 `consult_sentinel`에게 그 경로를 그대로 전달하세요.
+    4. **데이터 기반 보고**: Sentinel이 제공한 **[Attack Details & Payloads]의 내용을 참고하여 표를 작성하거나 요약하세요.**
+    5. **심층 분석(로그 분석 시)**: Sentinel의 보고에서 **탐지된 모든 공격 유형(상위 3개)**과 **각 페이로드 샘플**을 정리하여 `consult_analyst`에게 전달하세요. 
+       - 예: "SQL Injection(Sample: ' OR 1=1)... 트렌드 분석해줘."
+    6. **최종 브리핑**: 수집된 모든 정보를 종합하여 보고서를 작성하세요.
     
     [최종 보고서 양식]
     # 🕵️‍♂️ Sherlog 보안 분석 리포트
@@ -170,5 +188,5 @@ manager = Agent(
     - Sentinel이 제공한 **[Attack Details & Payloads]** 샘플을 기반으로, 한국어로 구체적인 코드 수정 방안을 제시하세요.
     - 영어 표현은 최대한 배제하고, '입력값 검증', '특수문자 필터링' 등 명확한 한글 용어를 사용하세요.
     """,
-    tools=[consult_sentinel, consult_analyst]
+    tools=[consult_sentinel, consult_analyst, ask_analyst]
 )
